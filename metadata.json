@@ -1,0 +1,6 @@
+{
+  "name": "Browndilux",
+  "description": "Multi-vendor contemporary Nigerian fashion marketplace & social-commerce hybrid with verified local makers, AI Style Lab avatar try-on, WhatsApp styling, and secure checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

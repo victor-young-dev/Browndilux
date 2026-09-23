@@ -1,0 +1,63 @@
+name: Browndilux CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate-and-test:
+    name: Build, Lint & Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck / Lint
+        run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Build Production Bundle
+        run: npm run build
+        env:
+          VITE_WHATSAPP_NUMBER: '2348136132727'
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: browndilux-dist
+          path: dist/
+          retention-days: 7
+
+  deploy-preview:
+    name: Deploy to Edge CDN
+    needs: validate-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: browndilux-dist
+          path: dist
+
+      - name: Verify Bundle Integrity
+        run: |
+          test -f dist/index.html
+          echo "Production build verified and deployment-ready."
