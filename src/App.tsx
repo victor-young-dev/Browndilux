@@ -6,6 +6,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { QuickViewModal } from './components/QuickViewModal';
 import { Toast } from './components/Toast';
 import { AuthModal } from './components/AuthModal';
+import { StakeholderQuickBar } from './components/StakeholderQuickBar';
 
 import { GatewayLandingView } from './views/GatewayLandingView';
 import { HomeView } from './views/HomeView';
@@ -32,6 +33,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] dark:bg-[#151110] text-[#1A1615] dark:text-[#FAF7F2] font-sans transition-colors duration-200">
       <Navbar />
+      <StakeholderQuickBar />
 
       <main className="flex-1">
         {currentView === 'gateway' && <GatewayLandingView />}

@@ -55,6 +55,10 @@ interface ShopContextType {
   addNewProduct: (product: Product) => void;
   
   // Stakeholder & Auth State
+  appMode: 'live' | 'demo';
+  setAppMode: (mode: 'live' | 'demo') => void;
+  enterProductionApp: (targetRole?: UserRole) => void;
+  enterDemoApp: (targetRole?: UserRole) => void;
   currentUser: UserProfile | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   activeRole: UserRole;
@@ -186,6 +190,24 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Multi-Stakeholder & Auth State
+  const [appMode, setAppModeState] = useState<'live' | 'demo'>(() => {
+    try {
+      const saved = localStorage.getItem('browndilux_app_mode');
+      if (saved === 'live' || saved === 'demo') return saved;
+      return 'live';
+    } catch {
+      return 'live';
+    }
+  });
+
+  const setAppMode = (mode: 'live' | 'demo') => {
+    setAppModeState(mode);
+    try {
+      localStorage.setItem('browndilux_app_mode', mode);
+    } catch {}
+    showToast(mode === 'live' ? '🟢 Switched to Live Production Platform' : '🟠 Switched to Interactive Demo Sandbox');
+  };
+
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(DEMO_PROFILES.buyer);
   const [activeRole, setActiveRole] = useState<UserRole>('buyer');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -227,10 +249,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsDarkMode(prev => !prev);
   };
 
-  // Products with inventory overrides
+  // Products with inventory overrides and custom artisan publications
   const [products, setProducts] = useState<Product[]>(() => {
     const overrides = getInventoryOverrides();
-    return INITIAL_PRODUCTS.map(p => ({
+    let customArtisanProds: Product[] = [];
+    try {
+      const savedCustom = localStorage.getItem('browndilux_custom_products');
+      if (savedCustom) customArtisanProds = JSON.parse(savedCustom);
+    } catch {}
+    const combined = [...customArtisanProds, ...INITIAL_PRODUCTS];
+    return combined.map(p => ({
       ...p,
       stock: overrides[p.id] !== undefined ? overrides[p.id] : p.stock
     }));
@@ -292,6 +320,40 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentView('home');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const enterProductionApp = (targetRole?: UserRole) => {
+    setAppModeState('live');
+    try {
+      localStorage.setItem('browndilux_app_mode', 'live');
+    } catch {}
+    const role = targetRole || activeRole || 'buyer';
+    const profile = DEMO_PROFILES[role];
+    setCurrentUser(profile);
+    setActiveRole(role);
+    setIsAuthModalOpen(false);
+    showToast(`🟢 Entering Live Production Platform as ${role.toUpperCase()}`);
+
+    if (role === 'seller') {
+      setCurrentView('seller-portal');
+    } else if (role === 'wholesaler') {
+      setCurrentView('wholesaler-portal');
+    } else if (role === 'admin') {
+      setCurrentView('dashboard');
+    } else {
+      setCurrentView('home');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const enterDemoApp = (targetRole?: UserRole) => {
+    setAppModeState('demo');
+    try {
+      localStorage.setItem('browndilux_app_mode', 'demo');
+    } catch {}
+    const role = targetRole || 'buyer';
+    loginAsDemo(role);
+    showToast(`🟠 Launched Interactive Demo Showcase (${role.toUpperCase()} preview)`);
   };
 
   const logoutUser = () => {
@@ -464,8 +526,16 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addNewProduct = (product: Product) => {
-    setProducts(prev => [product, ...prev]);
-    showToast(`Published "${product.name}" to Browndilux Catalog!`);
+    setProducts(prev => {
+      const next = [product, ...prev];
+      try {
+        const savedCustom = localStorage.getItem('browndilux_custom_products');
+        const customList = savedCustom ? JSON.parse(savedCustom) : [];
+        localStorage.setItem('browndilux_custom_products', JSON.stringify([product, ...customList]));
+      } catch {}
+      return next;
+    });
+    showToast(`Published "${product.name}" live to Browndilux Catalog!`);
   };
 
   const createWholesaleOrder = (order: WholesaleBatchOrder) => {
@@ -531,6 +601,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         modifyOrderStatus,
         modifyStock,
         addNewProduct,
+        appMode,
+        setAppMode,
+        enterProductionApp,
+        enterDemoApp,
         currentUser,
         setCurrentUser,
         activeRole,
